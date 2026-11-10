@@ -1,0 +1,45 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --c-bg: 243 244 240;
+  --c-surface: 255 255 255;
+  --c-ink: 22 32 42;
+  --c-muted: 95 107 118;
+  --c-line: 221 225 218;
+  --c-accent: 31 79 216;
+  --c-accent-ink: 255 255 255;
+}
+.dark {
+  --c-bg: 14 19 24;
+  --c-surface: 21 28 35;
+  --c-ink: 231 236 239;
+  --c-muted: 140 153 164;
+  --c-line: 38 48 58;
+  --c-accent: 117 148 255;
+  --c-accent-ink: 10 16 30;
+  color-scheme: dark;
+}
+
+@layer base {
+  body { @apply bg-bg font-sans text-ink antialiased; }
+  h1, h2, h3 { @apply font-display tracking-tight; }
+  :focus-visible { @apply outline-none ring-2 ring-accent ring-offset-2 ring-offset-bg; }
+  input, select, textarea { @apply w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-muted/70; }
+  input[type='checkbox'] { @apply w-auto; }
+  textarea { @apply min-h-[88px] resize-y; }
+}
+
+@layer components {
+  .btn { @apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50; }
+  .btn-primary { @apply bg-accent text-accent-ink hover:opacity-90; }
+  .btn-secondary { @apply border border-line bg-surface text-ink hover:bg-bg; }
+  .btn-ghost { @apply text-muted hover:bg-line/50 hover:text-ink; }
+  .btn-danger { @apply bg-rose-600 text-white hover:bg-rose-700; }
+  .panel { @apply rounded-xl border border-line bg-surface; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
