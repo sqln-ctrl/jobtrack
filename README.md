@@ -25,7 +25,7 @@ Tests: `cd backend && pytest` (uses in-memory SQLite, no Google credentials need
 
 **Phase 1, foundation:** Google sign-in, JWT in an HTTP-only cookie, CSRF double-submit protection, protected routes, Alembic migrations, user table.
 **Phase 2, manual tracker:** application CRUD, platforms (7 defaults plus custom), 9 statuses with history, search, filters and sorting, dashboard stats, details page with timeline, interviews.
-**Phase 3, Gmail:** separate read-only OAuth consent (`gmail.readonly`), Fernet-encrypted tokens, 90-day initial sync, incremental sync via the History API with fallback on expired history IDs, rule-based classifier behind an interface, company/title extraction, confidence-scored matching, automatic status updates recorded in history, manual match/ignore for ambiguous emails, Sync Now, disconnect with revocation.
+**Phase 3, Gmail:** separate read-only OAuth consent (`gmail.readonly`), Fernet-encrypted tokens, 90-day initial sync, incremental sync via the History API with fallback on expired history IDs, rule-based classifier behind an interface, company/title extraction, confidence-scored matching, automatic status updates recorded in history, manual match/ignore for ambiguous emails, Sync Now, disconnect with revocation. LinkedIn job-alert emails are imported into their own Job alerts page, with an Apply link for every detected listing.
 
 ## Behaviour worth knowing
 
@@ -34,6 +34,7 @@ Tests: `cd backend && pytest` (uses in-memory SQLite, no Google credentials need
 - **Saving a job never marks it Applied.** A confirmation email does (reliable evidence).
 - **Unrelated mail is never stored.** Only job-related emails are saved, with a 1,500-character excerpt.
 - Gmail sync is manual (Sync Now) plus once after connecting. Scheduled polling is Phase 4.
+- Job alerts are detected from recent LinkedIn job-alert email messages during each Gmail sync; they are kept separate from application-reply activity.
 
 ## Layout
 

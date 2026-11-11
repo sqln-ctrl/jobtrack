@@ -13,6 +13,7 @@ from app.models.application import JobApplication
 from app.models.email import Email
 from app.models.enums import EmailCategory, ProcessingStatus, SyncStatus
 from app.models.gmail import GmailConnection
+from app.services import job_alerts
 from app.services.applications.email_linking import link_email
 from app.services.applications.matcher import match_application
 from app.services.email_classifier.classifier import EmailClassifier, RuleBasedClassifier
@@ -27,6 +28,7 @@ JOB_QUERY = (
     'OR recruiter OR "hiring team" OR position OR "thank you for your interest") '
     '-in:chats -category:promotions -category:social'
 )
+LINKEDIN_ALERT_QUERY = 'from:(jobalerts-noreply@linkedin.com OR jobs-noreply@linkedin.com) ("job alert" OR "jobs for you" OR "new jobs")'
 STALE_SYNC = timedelta(minutes=10)
 
 
@@ -37,6 +39,7 @@ class SyncResult:
     matched: int = 0
     needs_review: int = 0
     skipped: int = 0
+    job_alerts: int = 0
 
 
 def begin_sync(db: Session, user_id: int) -> GmailConnection:
@@ -97,16 +100,25 @@ class GmailSyncService:
 
     def _collect_ids(self, client: GmailClient, conn: GmailConnection) -> List[str]:
         s = get_settings()
+        alert_query = f"{LINKEDIN_ALERT_QUERY} newer_than:{s.gmail_sync_days}d"
         if conn.history_id:
             try:
-                return client.history_message_ids(conn.history_id)
+                # History only covers mail that arrived since the last sync. Re-run the
+                # bounded LinkedIn query as well so existing Gmail connections receive
+                # their recent alerts when this feature is first introduced.
+                changed_ids = client.history_message_ids(conn.history_id)
+                alert_ids = client.list_message_ids(alert_query, s.gmail_max_messages_per_sync)
+                return list(dict.fromkeys(changed_ids + alert_ids))
             except HistoryExpired:
                 pass  # fall through to a fresh full sync
         query = f"{JOB_QUERY} newer_than:{s.gmail_sync_days}d"
-        return client.list_message_ids(query, s.gmail_max_messages_per_sync)
+        application_ids = client.list_message_ids(query, s.gmail_max_messages_per_sync)
+        alert_ids = client.list_message_ids(alert_query, s.gmail_max_messages_per_sync)
+        return list(dict.fromkeys(application_ids + alert_ids))
 
     def _process_ids(self, client: GmailClient, user_id: int, ids: List[str], result: SyncResult) -> None:
         known = set(self.db.scalars(select(Email.gmail_message_id).where(Email.user_id == user_id, Email.gmail_message_id.in_(ids)))) if ids else set()
+        known |= job_alerts.message_ids(self.db, user_id)
         parsed: List[ParsedMessage] = []
         for mid in ids:
             if mid in known:
@@ -125,6 +137,11 @@ class GmailSyncService:
                 self.db.rollback()
 
     def _process_message(self, user_id: int, m: ParsedMessage, apps: List[JobApplication], result: SyncResult) -> None:
+        if job_alerts.is_linkedin_job_alert(m.sender, m.subject):
+            listings = job_alerts.extract_linkedin_listings(m.html_body)
+            if listings:
+                result.job_alerts += job_alerts.store_listings(self.db, user_id, m, listings)
+                return
         cls = self.classifier.classify(m.sender, m.subject, m.body)
         if cls.category == EmailCategory.NOT_JOB_RELATED:
             result.skipped += 1  # unrelated mail is never stored

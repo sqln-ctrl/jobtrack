@@ -5,7 +5,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api.v1 import applications, auth, dashboard, emails, gmail, interviews, platforms
+from app.api.v1 import applications, auth, dashboard, emails, gmail, interviews, job_alerts, platforms
 from app.core.config import get_settings
 from app.core.cookies import CSRF_COOKIE
 from app.core.errors import AppError
@@ -44,7 +44,7 @@ async def csrf_protect(request: Request, call_next):
 
 app.add_middleware(CORSMiddleware, allow_origins=[settings.frontend_url], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
-for module in (auth, applications, platforms, gmail, emails, dashboard, interviews):
+for module in (auth, applications, platforms, gmail, emails, dashboard, interviews, job_alerts):
     app.include_router(module.router, prefix="/api/v1")
 
 

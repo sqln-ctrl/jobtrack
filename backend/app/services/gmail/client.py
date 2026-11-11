@@ -31,6 +31,7 @@ class ParsedMessage:
     sender: str
     subject: str
     body: str
+    html_body: str
     received_at: datetime
 
 
@@ -128,11 +129,26 @@ def _find_body(payload: dict) -> str:
     return re.sub(r"\s+", " ", " ".join(plain)).strip() if plain else " ".join(html_part)
 
 
+def _find_html(payload: dict) -> str:
+    parts = []
+
+    def walk(part: dict):
+        data = (part.get("body") or {}).get("data")
+        if data and part.get("mimeType") == "text/html":
+            parts.append(_decode(data))
+        for child in part.get("parts", []) or []:
+            walk(child)
+
+    walk(payload)
+    return "\n".join(parts)
+
+
 def parse_message(msg: dict) -> ParsedMessage:
     payload = msg.get("payload", {})
     headers = {h["name"].lower(): h["value"] for h in payload.get("headers", [])}
     received = datetime.fromtimestamp(int(msg.get("internalDate", 0)) / 1000, tz=timezone.utc)
     return ParsedMessage(
         id=msg["id"], thread_id=msg.get("threadId", ""), sender=headers.get("from", ""),
-        subject=headers.get("subject", ""), body=_find_body(payload) or msg.get("snippet", ""), received_at=received,
+        subject=headers.get("subject", ""), body=_find_body(payload) or msg.get("snippet", ""),
+        html_body=_find_html(payload), received_at=received,
     )

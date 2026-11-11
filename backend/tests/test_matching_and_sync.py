@@ -2,7 +2,7 @@ from datetime import date, datetime, timezone
 
 from sqlalchemy import select
 
-from app.models import ApplicationHistory, Email, GmailConnection, JobApplication, Platform
+from app.models import ApplicationHistory, Email, GmailConnection, JobAlert, JobApplication, Platform
 from app.core.security import encrypt
 from app.services.applications.matcher import match_application
 from app.services.email_classifier.extractor import extract
@@ -74,6 +74,14 @@ def raw(mid, sender, subject, body, ts):
     data = base64.urlsafe_b64encode(body.encode()).decode()
     return {"id": mid, "threadId": "t" + mid, "internalDate": str(ts * 1000), "payload": {
         "mimeType": "text/plain", "body": {"data": data}, "headers": [{"name": "From", "value": sender}, {"name": "Subject", "value": subject}]}}
+
+
+def raw_html(mid, sender, subject, body, ts):
+    import base64
+    data = base64.urlsafe_b64encode(body.encode()).decode()
+    return {"id": mid, "threadId": "t" + mid, "internalDate": str(ts * 1000), "payload": {
+        "mimeType": "multipart/alternative", "headers": [{"name": "From", "value": sender}, {"name": "Subject", "value": subject}],
+        "parts": [{"mimeType": "text/html", "body": {"data": data}}]}}
 
 
 def connect(db, user, history_id=None):
@@ -155,3 +163,15 @@ def test_other_users_applications_are_never_matched(db, user):
     run(db, user, FakeClient({"m1": raw("m1", "ABC <hr@abc.com>", "Interview Invitation — Backend Developer", "Please schedule an interview.", 1_800_000_100)}))
     assert db.scalar(select(Email)).processing_status == "needs_review"
     assert db.scalar(select(JobApplication).where(JobApplication.user_id == other.id)).status == "applied"
+
+
+def test_linkedin_alert_syncs_listings_without_creating_email_activity(db, user):
+    connect(db, user)
+    html = '''<html><body><a href="https://www.linkedin.com/jobs/view/12345?tracking=alert">Backend Engineer at Acme</a>
+    <a href="https://www.linkedin.com/jobs/view/67890">Data Engineer</a></body></html>'''
+    result = run(db, user, FakeClient({"m1": raw_html("m1", "LinkedIn Job Alerts <jobalerts-noreply@linkedin.com>", "Job alert: new jobs for you", html, 1_800_000_100)}))
+    alerts = db.scalars(select(JobAlert).order_by(JobAlert.position)).all()
+    assert result.job_alerts == 2
+    assert [(a.job_title, a.company_name) for a in alerts] == [("Backend Engineer", "Acme"), ("Data Engineer", None)]
+    assert alerts[0].job_url.startswith("https://www.linkedin.com/jobs/view/12345")
+    assert db.query(Email).count() == 0
