@@ -16,6 +16,8 @@ export const useRecentActivity = () => useQuery({ queryKey: ['dashboard', 'activ
 export const useInterviews = (params) => useQuery({ queryKey: ['interviews', params], queryFn: () => get('/interviews', params), refetchInterval: LIVE })
 export const useEmails = (params) =>
   useQuery({ queryKey: ['emails', params], queryFn: () => get('/emails', params), placeholderData: keepPreviousData, refetchInterval: LIVE })
+export const useJobAlerts = (params) =>
+  useQuery({ queryKey: ['job-alerts', params], queryFn: () => get('/job-alerts', params), placeholderData: keepPreviousData, refetchInterval: LIVE })
 export const useGmailStatus = () =>
   useQuery({
     queryKey: ['gmail', 'status'],
@@ -25,7 +27,7 @@ export const useGmailStatus = () =>
 
 export function useRefreshAll() {
   const qc = useQueryClient()
-  return () => ['applications', 'application', 'dashboard', 'emails', 'interviews'].forEach((key) => qc.invalidateQueries({ queryKey: [key] }))
+  return () => ['applications', 'application', 'dashboard', 'emails', 'job-alerts', 'interviews'].forEach((key) => qc.invalidateQueries({ queryKey: [key] }))
 }
 
 /** Generic mutation that refreshes the data every screen depends on. */

@@ -8,6 +8,7 @@ import Applications from './pages/Applications'
 import ApplicationDetail from './pages/ApplicationDetail'
 import Platforms from './pages/Platforms'
 import EmailActivity from './pages/EmailActivity'
+import JobAlerts from './pages/JobAlerts'
 import Interviews from './pages/Interviews'
 import Settings from './pages/Settings'
 import { Spinner } from './components/ui'
@@ -38,6 +39,7 @@ export default function App() {
           <Route path="applications/:id" element={<ApplicationDetail />} />
           <Route path="platforms" element={<Platforms />} />
           <Route path="emails" element={<EmailActivity />} />
+          <Route path="job-alerts" element={<JobAlerts />} />
           <Route path="interviews" element={<Interviews />} />
           <Route path="settings" element={<Settings />} />
         </Route>

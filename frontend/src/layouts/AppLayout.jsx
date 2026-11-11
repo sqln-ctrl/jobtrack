@@ -9,6 +9,7 @@ const NAV = [
   { to: '/applications', label: 'All applications', icon: 'list' },
   { to: '/platforms', label: 'Platforms', icon: 'platforms' },
   { to: '/emails', label: 'Email activity', icon: 'mail' },
+  { to: '/job-alerts', label: 'Job alerts', icon: 'bell' },
   { to: '/interviews', label: 'Interviews', icon: 'calendar' },
   { to: '/settings', label: 'Settings', icon: 'settings' },
 ]
