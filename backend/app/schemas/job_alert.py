@@ -9,6 +9,7 @@ class JobAlertOut(BaseModel):
     job_title: str
     company_name: Optional[str]
     location: Optional[str]
+    description: Optional[str]
     job_url: str
     received_at: datetime
 
