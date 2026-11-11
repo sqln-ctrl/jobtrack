@@ -1,16 +1,16 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { useApplications, useInterviews, usePlatformDistribution, useRecentActivity, useStats, useStatusDistribution } from '../hooks/useData'
+import { useApplications, useAutoSyncGmail, useInterviews, usePlatformDistribution, useRecentActivity, useStats, useStatusDistribution } from '../hooks/useData'
 import { STATUS_BY_VALUE, CATEGORY_TONE, DEFAULT_CATEGORY_TONE } from '../utils/constants'
 import { fmtDateTime, timeAgo } from '../utils/format'
 import ApplicationForm from '../components/ApplicationForm'
 import SyncButton from '../components/SyncButton'
-import { Empty, Icon, Loading, PageHeader, PlatformMark, StatusBadge } from '../components/ui'
+import { Empty, Icon, Loading, PageHeader, Pagination, PlatformMark, StatusBadge } from '../components/ui'
 
 const TILES = [
-  ['total', 'Total applications'], ['this_week', 'This week'], ['interviews', 'Interviews'],
-  ['rejected', 'Rejected'], ['offers', 'Offers'], ['awaiting_response', 'Awaiting response'],
+  ['total', 'Total applications'], ['this_week', 'This week'], ['interview_calls', 'Interview calls'],
+  ['accepted', 'Accepted'], ['awaiting_response', 'Awaiting response'],
 ]
 
 function Pipeline({ items }) {
@@ -36,10 +36,12 @@ function Pipeline({ items }) {
 export default function Overview() {
   const { user } = useAuth()
   const [adding, setAdding] = useState(false)
+  const [applicationPage, setApplicationPage] = useState(1)
   const stats = useStats()
   const dist = useStatusDistribution()
   const platforms = usePlatformDistribution()
-  const recent = useApplications({ sort: 'updated', page_size: 6 })
+  const applications = useApplications({ sort: 'updated', page: applicationPage, page_size: 10 })
+  const gmail = useAutoSyncGmail()
   const activity = useRecentActivity()
   const upcoming = useInterviews({ upcoming: true, limit: 5 })
 
@@ -54,6 +56,7 @@ export default function Overview() {
       </>}>
         {stats.data ? `${stats.data.awaiting_response} waiting to hear back${stats.data.emails_needing_review ? ` · ${stats.data.emails_needing_review} emails need your review` : ''}` : 'Your job search at a glance'}
       </PageHeader>
+      {gmail?.connected && <p className="-mt-4 mb-6 text-sm text-muted">Gmail checks for updates every five minutes while this page is open.</p>}
 
       {!stats.data ? <Loading /> : empty ? (
         <div className="panel"><Empty title="Add your first application" action={<button className="btn btn-primary" onClick={() => setAdding(true)}><Icon name="plus" />Add application</button>}>
@@ -70,11 +73,11 @@ export default function Overview() {
 
           <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
             <section className="panel">
-              <div className="flex items-center justify-between px-5 py-4"><h2 className="text-base font-semibold">Recent applications</h2><Link to="/applications" className="text-sm font-medium text-accent hover:underline">View all</Link></div>
+              <div className="flex items-center justify-between px-5 py-4"><div><h2 className="text-base font-semibold">Applications</h2><p className="mt-0.5 text-xs text-muted">Sent, Viewed, Interview call and Accepted</p></div><Link to="/applications" className="text-sm font-medium text-accent hover:underline">Manage applications</Link></div>
               <div className="overflow-x-auto"><table className="w-full text-left text-sm">
                 <thead className="border-y border-line text-xs text-muted"><tr><th className="px-5 py-2 font-medium">Company</th><th className="px-3 py-2 font-medium">Position</th><th className="px-3 py-2 font-medium">Platform</th><th className="px-3 py-2 font-medium">Status</th><th className="px-5 py-2 font-medium">Activity</th></tr></thead>
                 <tbody className="divide-y divide-line">
-                  {recent.data?.items.map((a) => (
+                  {applications.data?.items.map((a) => (
                     <tr key={a.id} className="hover:bg-bg/60">
                       <td className="px-5 py-3 font-medium"><Link to={`/applications/${a.id}`} className="hover:text-accent">{a.company_name}</Link></td>
                       <td className="px-3 py-3">{a.job_title}</td>
@@ -85,6 +88,7 @@ export default function Overview() {
                   ))}
                 </tbody>
               </table></div>
+              {applications.data && <Pagination page={applicationPage} pageSize={10} total={applications.data.total} onPage={setApplicationPage} />}
             </section>
 
             <div className="space-y-6">

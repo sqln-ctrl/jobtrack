@@ -18,8 +18,8 @@ export default function Login() {
         <h1 className="mt-4 text-4xl font-bold leading-[1.05] sm:text-6xl">Apply for jobs. Let your inbox update the tracker.</h1>
         <p className="mt-5 max-w-md text-base text-muted">Keep every application from LinkedIn, Indeed, Rozee.pk and company sites in one list, and see replies land on the right job automatically.</p>
         <div className="mt-8 flex flex-wrap items-center gap-2" aria-label="Example application journey">
-          {['applied', 'under_review', 'assessment', 'interview', 'offer'].map((s, i) => (
-            <span key={s} className="flex items-center gap-2"><StatusBadge status={s} />{i < 4 && <span className="text-line">—</span>}</span>
+          {['sent', 'viewed', 'interview_call', 'accepted'].map((s, i) => (
+            <span key={s} className="flex items-center gap-2"><StatusBadge status={s} />{i < 3 && <span className="text-line">—</span>}</span>
           ))}
         </div>
       </div>
