@@ -32,6 +32,7 @@ export default function JobAlerts() {
                 <div className="min-w-0">
                   <p className="font-semibold">{job.job_title}</p>
                   {(job.company_name || job.location) && <p className="mt-0.5 text-sm text-muted">{[job.company_name, job.location].filter(Boolean).join(' · ')}</p>}
+                  <p className="mt-1 max-w-2xl text-sm text-muted line-clamp-2">{job.description || 'Open on LinkedIn for the full job description.'}</p>
                   <p className="mt-1 text-xs text-muted" title={fmtDateTime(job.received_at)}>LinkedIn alert · {timeAgo(job.received_at)}</p>
                 </div>
                 <a href={job.job_url} target="_blank" rel="noreferrer" className="btn btn-primary shrink-0">
