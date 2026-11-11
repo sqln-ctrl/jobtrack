@@ -1,9 +1,11 @@
+import { useEffect, useRef } from 'react'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../services/api'
 import { clean } from '../utils/format'
 
 const get = (url, params) => api.get(url, { params: clean(params) }).then((r) => r.data)
 const LIVE = 30_000 // dashboards refresh on their own so new emails and statuses show up without a reload
+const GMAIL_AUTO_SYNC = 5 * 60_000
 
 export const usePlatforms = () => useQuery({ queryKey: ['platforms'], queryFn: () => get('/platforms'), staleTime: 60_000 })
 export const useApplications = (params) =>
@@ -46,3 +48,38 @@ export function useApiMutation(fn, { refresh = true, onSuccess } = {}) {
 }
 
 export const useSyncGmail = () => useApiMutation(() => api.post('/gmail/sync').then((r) => r.data), { refresh: false })
+
+/** Keep Gmail-sourced application statuses current while the overview is open. */
+export function useAutoSyncGmail(enabled = true) {
+  const { data: status } = useGmailStatus()
+  const sync = useSyncGmail()
+  const refreshAll = useRefreshAll()
+  const mutate = useRef(sync.mutate)
+  const previousStatus = useRef(null)
+  const started = useRef(false)
+  mutate.current = sync.mutate
+
+  useEffect(() => {
+    if (previousStatus.current === 'syncing' && status?.sync_status && status.sync_status !== 'syncing') refreshAll()
+    previousStatus.current = status?.sync_status
+  }, [status?.sync_status, refreshAll])
+
+  useEffect(() => {
+    if (!enabled || !status?.connected) {
+      started.current = false
+      return undefined
+    }
+    if (status.sync_status === 'syncing') return undefined
+    const syncIfVisible = () => {
+      if (document.visibilityState === 'visible') mutate.current()
+    }
+    if (!started.current) {
+      started.current = true
+      syncIfVisible()
+    }
+    const interval = window.setInterval(syncIfVisible, GMAIL_AUTO_SYNC)
+    return () => window.clearInterval(interval)
+  }, [enabled, status?.connected, status?.sync_status])
+
+  return status
+}
