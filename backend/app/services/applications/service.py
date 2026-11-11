@@ -92,11 +92,11 @@ def create_application(db: Session, user_id: int, data: ApplicationCreate) -> Jo
     app = JobApplication(user_id=user_id, **{**values, "application_date": data.application_date})
     db.add(app)
     db.flush()
-    submitted = data.status != ApplicationStatus.SAVED
+    initial_at = min(datetime.combine(data.application_date, time.min, tzinfo=timezone.utc), utcnow())
     db.add(ApplicationHistory(
         application_id=app.id, previous_status=None, new_status=app.status, change_source=ChangeSource.MANUAL.value,
-        description="Application submitted" if submitted else "Job saved",
-        created_at=datetime.combine(data.application_date, time.min, tzinfo=timezone.utc),
+        description="Application sent",
+        created_at=initial_at,
     ))
     db.commit()
     return app

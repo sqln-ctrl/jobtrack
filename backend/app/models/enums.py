@@ -2,21 +2,14 @@ from enum import Enum
 
 
 class ApplicationStatus(str, Enum):
-    SAVED = "saved"
-    APPLIED = "applied"
-    UNDER_REVIEW = "under_review"
-    INTERVIEW = "interview"
-    ASSESSMENT = "assessment"
-    REJECTED = "rejected"
-    OFFER = "offer"
-    WITHDRAWN = "withdrawn"
-    NO_RESPONSE = "no_response"
+    SENT = "sent"
+    VIEWED = "viewed"
+    INTERVIEW_CALL = "interview_call"
+    ACCEPTED = "accepted"
 
 
 STATUS_LABELS = {
-    "saved": "Saved", "applied": "Applied", "under_review": "Under review", "interview": "Interview",
-    "assessment": "Assessment", "rejected": "Rejected", "offer": "Offer", "withdrawn": "Withdrawn",
-    "no_response": "No response",
+    "sent": "Sent", "viewed": "Viewed", "interview_call": "Interview call", "accepted": "Accepted",
 }
 
 

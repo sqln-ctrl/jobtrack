@@ -8,7 +8,7 @@ from app.models.application import ApplicationHistory, Interview, JobApplication
 from app.models.email import Email
 from app.models.enums import STATUS_LABELS, ApplicationStatus, ProcessingStatus
 
-PIPELINE = ["saved", "applied", "under_review", "assessment", "interview", "offer", "rejected", "withdrawn", "no_response"]
+PIPELINE = ["sent", "viewed", "interview_call", "accepted"]
 
 
 def status_counts(db: Session, user_id: int) -> Dict[str, int]:
@@ -28,9 +28,9 @@ def stats(db: Session, user_id: int) -> dict:
     needs_review = db.scalar(select(func.count()).select_from(Email).where(
         Email.user_id == user_id, Email.processing_status == ProcessingStatus.NEEDS_REVIEW.value)) or 0
     return {
-        "total": sum(counts.values()), "this_week": this_week, "interviews": counts["interview"],
-        "upcoming_interviews": upcoming, "rejected": counts["rejected"], "offers": counts["offer"],
-        "awaiting_response": counts["applied"] + counts["under_review"], "emails_needing_review": needs_review,
+        "total": sum(counts.values()), "this_week": this_week, "interview_calls": counts["interview_call"],
+        "upcoming_interviews": upcoming, "accepted": counts["accepted"],
+        "awaiting_response": counts["sent"] + counts["viewed"], "emails_needing_review": needs_review,
     }
 
 

@@ -27,7 +27,7 @@ class ApplicationBase(BaseModel):
     company_name: str = Field(min_length=1, max_length=255)
     platform_id: int
     application_date: date
-    status: ApplicationStatus = ApplicationStatus.APPLIED
+    status: ApplicationStatus = ApplicationStatus.SENT
     job_description: Optional[str] = None
     job_url: Optional[str] = Field(default=None, max_length=2048)
     company_website: Optional[str] = Field(default=None, max_length=2048)

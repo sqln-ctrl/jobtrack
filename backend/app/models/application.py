@@ -40,7 +40,7 @@ class JobApplication(Base):
     employment_type: Mapped[Optional[str]] = mapped_column(String(32))
     salary_range: Mapped[Optional[str]] = mapped_column(String(120))
     application_date: Mapped[date] = mapped_column(Date)
-    status: Mapped[str] = mapped_column(String(32), default="applied")
+    status: Mapped[str] = mapped_column(String(32), default="sent")
     notes: Mapped[Optional[str]] = mapped_column(Text)
     contact_person: Mapped[Optional[str]] = mapped_column(String(255))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
