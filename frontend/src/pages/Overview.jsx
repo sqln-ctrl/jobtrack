@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useApplications, useAutoSyncGmail, useInterviews, usePlatformDistribution, useRecentActivity, useStats, useStatusDistribution } from '../hooks/useData'
-import { STATUS_BY_VALUE, CATEGORY_TONE, DEFAULT_CATEGORY_TONE } from '../utils/constants'
+import { applicationSource, STATUS_BY_VALUE, CATEGORY_TONE, DEFAULT_CATEGORY_TONE } from '../utils/constants'
 import { fmtDateTime, timeAgo } from '../utils/format'
 import ApplicationForm from '../components/ApplicationForm'
 import SyncButton from '../components/SyncButton'
@@ -33,6 +33,11 @@ function Pipeline({ items }) {
   )
 }
 
+function SourceBadge({ platform }) {
+  const source = applicationSource(platform)
+  return <span className={`inline-flex whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-semibold ${source.badge}`}>{source.label}</span>
+}
+
 export default function Overview() {
   const { user } = useAuth()
   const [adding, setAdding] = useState(false)
@@ -46,7 +51,15 @@ export default function Overview() {
   const upcoming = useInterviews({ upcoming: true, limit: 5 })
 
   const empty = stats.data && stats.data.total === 0
-  const maxPlatform = Math.max(1, ...(platforms.data ?? []).map((p) => p.count))
+  const sourceGroups = Object.values((platforms.data ?? []).reduce((groups, platform) => {
+    const source = applicationSource(platform.name)
+    const group = groups[source.key] ?? { ...source, count: 0, platforms: [] }
+    group.count += platform.count
+    group.platforms.push(platform.name)
+    groups[source.key] = group
+    return groups
+  }, {})).sort((a, b) => b.count - a.count)
+  const maxSource = Math.max(1, ...sourceGroups.map((source) => source.count))
 
   return (
     <>
@@ -75,13 +88,13 @@ export default function Overview() {
             <section className="panel">
               <div className="flex items-center justify-between px-5 py-4"><div><h2 className="text-base font-semibold">Applications</h2><p className="mt-0.5 text-xs text-muted">Sent, Viewed, Interview call and Accepted</p></div><Link to="/applications" className="text-sm font-medium text-accent hover:underline">Manage applications</Link></div>
               <div className="overflow-x-auto"><table className="w-full text-left text-sm">
-                <thead className="border-y border-line text-xs text-muted"><tr><th className="px-5 py-2 font-medium">Company</th><th className="px-3 py-2 font-medium">Position</th><th className="px-3 py-2 font-medium">Platform</th><th className="px-3 py-2 font-medium">Status</th><th className="px-5 py-2 font-medium">Activity</th></tr></thead>
+                <thead className="border-y border-line text-xs text-muted"><tr><th className="px-5 py-2 font-medium">Company</th><th className="px-3 py-2 font-medium">Position</th><th className="px-3 py-2 font-medium">Applied via</th><th className="px-3 py-2 font-medium">Status</th><th className="px-5 py-2 font-medium">Activity</th></tr></thead>
                 <tbody className="divide-y divide-line">
                   {applications.data?.items.map((a) => (
                     <tr key={a.id} className="hover:bg-bg/60">
                       <td className="px-5 py-3 font-medium"><Link to={`/applications/${a.id}`} className="hover:text-accent">{a.company_name}</Link></td>
                       <td className="px-3 py-3">{a.job_title}</td>
-                      <td className="px-3 py-3"><span className="flex items-center gap-2"><PlatformMark name={a.platform.name} />{a.platform.name}</span></td>
+                      <td className="px-3 py-3"><div className="flex flex-col items-start gap-1"><span className="flex items-center gap-2"><PlatformMark name={a.platform.name} />{a.platform.name}</span><SourceBadge platform={a.platform.name} /></div></td>
                       <td className="px-3 py-3"><StatusBadge status={a.status} /></td>
                       <td className="whitespace-nowrap px-5 py-3 text-muted">{timeAgo(a.updated_at)}</td>
                     </tr>
@@ -101,12 +114,12 @@ export default function Overview() {
                 ) : <p className="mt-2 text-sm text-muted">Nothing scheduled. <Link to="/interviews" className="font-medium text-accent hover:underline">Schedule an interview</Link></p>}
               </section>
               <section className="panel p-5">
-                <h2 className="text-base font-semibold">Applications by platform</h2>
+                <h2 className="text-base font-semibold">Applications by source</h2>
                 <ul className="mt-3 space-y-3">
-                  {platforms.data?.map((p) => (
-                    <li key={p.platform_id}>
-                      <div className="flex items-center justify-between text-sm"><span className="flex items-center gap-2"><PlatformMark name={p.name} />{p.name}</span><span className="font-semibold">{p.count}</span></div>
-                      <div className="mt-1.5 h-1.5 rounded-full bg-line"><div className="h-full rounded-full bg-accent" style={{ width: `${(p.count / maxPlatform) * 100}%` }} /></div>
+                  {sourceGroups.map((source) => (
+                    <li key={source.key}>
+                      <div className="flex items-center justify-between gap-2 text-sm"><div><SourceBadge platform={source.platforms[0]} /><p className="mt-1 text-xs text-muted">{source.platforms.join(', ')}</p></div><span className="font-semibold">{source.count}</span></div>
+                      <div className="mt-1.5 h-1.5 rounded-full bg-line"><div className="h-full rounded-full bg-accent" style={{ width: `${(source.count / maxSource) * 100}%` }} /></div>
                     </li>
                   ))}
                 </ul>

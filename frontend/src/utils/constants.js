@@ -6,6 +6,19 @@ export const STATUSES = [
 ]
 export const STATUS_BY_VALUE = Object.fromEntries(STATUSES.map((s) => [s.value, s]))
 
+const SOCIAL_MEDIA = new Set(['facebook', 'instagram', 'twitter', 'x', 'whatsapp', 'telegram', 'tiktok', 'reddit'])
+const JOB_BOARDS = new Set(['indeed', 'glassdoor', 'rozee.pk', 'wellfound', 'monster', 'ziprecruiter', 'bayt'])
+
+export const applicationSource = (platformName = '') => {
+  const name = platformName.trim().toLowerCase()
+  if (name === 'linkedin') return { key: 'linkedin', label: 'LinkedIn', badge: 'bg-blue-100 text-blue-800 dark:bg-blue-500/15 dark:text-blue-300' }
+  if (name === 'direct email' || name.includes('gmail') || name.includes('email')) return { key: 'direct_gmail', label: 'Direct Gmail', badge: 'bg-red-100 text-red-800 dark:bg-red-500/15 dark:text-red-300' }
+  if (SOCIAL_MEDIA.has(name)) return { key: 'social_media', label: 'Social media', badge: 'bg-violet-100 text-violet-800 dark:bg-violet-500/15 dark:text-violet-300' }
+  if (JOB_BOARDS.has(name)) return { key: 'job_board', label: 'Job board', badge: 'bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300' }
+  if (name === 'company website') return { key: 'company_website', label: 'Company website', badge: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300' }
+  return { key: 'other', label: 'Other', badge: 'bg-slate-100 text-slate-800 dark:bg-slate-500/15 dark:text-slate-300' }
+}
+
 export const EMPLOYMENT_TYPES = [
   { value: 'full_time', label: 'Full-time' },
   { value: 'part_time', label: 'Part-time' },
