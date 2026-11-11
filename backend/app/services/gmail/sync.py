@@ -9,15 +9,16 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.core.errors import Conflict, NotFound
-from app.models.application import JobApplication
+from app.models.application import ApplicationHistory, JobApplication, Platform
 from app.models.email import Email
-from app.models.enums import EmailCategory, ProcessingStatus, SyncStatus
+from app.models.enums import ApplicationStatus, ChangeSource, EmailCategory, ProcessingStatus, SyncStatus
 from app.models.gmail import GmailConnection
+from app.email_text import norm
 from app.services import job_alerts
 from app.services.applications.email_linking import link_email
 from app.services.applications.matcher import match_application
 from app.services.email_classifier.classifier import EmailClassifier, RuleBasedClassifier
-from app.services.email_classifier.extractor import extract
+from app.services.email_classifier.extractor import Extracted, extract
 from app.services.gmail.client import GmailAuthError, GmailClient, GmailError, HistoryExpired, ParsedMessage, parse_message
 from app.services.gmail.tokens import get_valid_access_token
 
@@ -40,6 +41,8 @@ class SyncResult:
     needs_review: int = 0
     skipped: int = 0
     job_alerts: int = 0
+    applications_created: int = 0
+    confirmations_enriched: int = 0
 
 
 def begin_sync(db: Session, user_id: int) -> GmailConnection:
@@ -79,6 +82,9 @@ class GmailSyncService:
             ids = self._collect_ids(client, conn)
             result.fetched = len(ids)
             self._process_ids(client, conn.user_id, ids, result)
+            result.confirmations_enriched = self._enrich_confirmations(conn.user_id)
+            result.applications_created = self._track_confirmed_applications(conn.user_id)
+            result.matched += self._match_pending_emails(conn.user_id)
 
             conn.history_id = latest_history_id or conn.history_id
             conn.last_synced_at = datetime.now(timezone.utc)
@@ -163,6 +169,90 @@ class GmailSyncService:
             result.matched += 1
         else:
             result.needs_review += 1
+
+    def _track_confirmed_applications(self, user_id: int) -> int:
+        """Create a tracked application only when Gmail provides reliable evidence.
+
+        LinkedIn recommendations are not applications. A confirmation or received
+        email with both a company and a job title is reliable evidence that the
+        user sent an application, and is safe to add to the tracker.
+        """
+        emails = list(self.db.scalars(select(Email).where(
+            Email.user_id == user_id,
+            Email.processing_status == ProcessingStatus.NEEDS_REVIEW.value,
+            Email.classification.in_((EmailCategory.APPLICATION_CONFIRMATION.value, EmailCategory.APPLICATION_RECEIVED.value)),
+            Email.extracted_company.is_not(None),
+            Email.extracted_job_title.is_not(None),
+        ).order_by(Email.received_at)))
+        if not emails:
+            return 0
+        platform = self.db.scalar(select(Platform).where(Platform.user_id.is_(None), Platform.name == "Direct Email"))
+        if platform is None:  # Default platforms are seeded at startup; keep sync safe if startup was interrupted.
+            return 0
+        apps = list(self.db.scalars(select(JobApplication).where(JobApplication.user_id == user_id)))
+        known = {(norm(app.job_title), norm(app.company_name)) for app in apps}
+        created = 0
+        for email in emails:
+            key = (norm(email.extracted_job_title), norm(email.extracted_company))
+            if not all(key) or key in known:
+                continue
+            app = JobApplication(
+                user_id=user_id, platform_id=platform.id, job_title=email.extracted_job_title,
+                company_name=email.extracted_company, application_date=email.received_at.date(),
+                status=ApplicationStatus.SENT.value,
+            )
+            self.db.add(app)
+            self.db.flush()
+            self.db.add(ApplicationHistory(
+                application_id=app.id, previous_status=None, new_status=ApplicationStatus.SENT.value,
+                change_source=ChangeSource.GMAIL.value, description="Created from Gmail application confirmation",
+                created_at=email.received_at,
+            ))
+            link_email(self.db, email, app, confidence=1.0)
+            known.add(key)
+            created += 1
+        if created:
+            self.db.commit()
+        return created
+
+    def _enrich_confirmations(self, user_id: int) -> int:
+        """Improve stored confirmation data when extraction rules are upgraded."""
+        emails = list(self.db.scalars(select(Email).where(
+            Email.user_id == user_id,
+            Email.classification.in_((EmailCategory.APPLICATION_CONFIRMATION.value, EmailCategory.APPLICATION_RECEIVED.value)),
+            Email.extracted_job_title.is_(None),
+        )))
+        enriched = 0
+        for email in emails:
+            extracted = extract(email.sender, email.subject, email.email_body_excerpt or "")
+            if extracted.job_title:
+                email.extracted_job_title = extracted.job_title
+                email.extracted_company = extracted.company or email.extracted_company
+                enriched += 1
+        if enriched:
+            self.db.commit()
+        return enriched
+
+    def _match_pending_emails(self, user_id: int) -> int:
+        """Replay pending Gmail replies after confirmation emails create applications."""
+        apps = list(self.db.scalars(select(JobApplication).where(JobApplication.user_id == user_id)))
+        if not apps:
+            return 0
+        emails = list(self.db.scalars(select(Email).where(
+            Email.user_id == user_id, Email.processing_status == ProcessingStatus.NEEDS_REVIEW.value,
+        ).order_by(Email.received_at)))
+        matched = 0
+        for email in emails:
+            extracted = Extracted(company=email.extracted_company, job_title=email.extracted_job_title)
+            match = match_application(
+                apps, sender=email.sender, subject=email.subject, body=email.email_body_excerpt or "", extracted=extracted,
+            )
+            if match.application is not None:
+                link_email(self.db, email, match.application, match.confidence)
+                matched += 1
+        if matched:
+            self.db.commit()
+        return matched
 
 
 def run_sync_in_background(user_id: int) -> None:

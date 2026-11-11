@@ -16,6 +16,7 @@ BODY_PATTERNS = [re.compile(p, re.I) for p in (
     r"(?:position|role|job) (?:of |as )?(?:the )?[\"“']?(?P<title>[^\"”'\n\.,]{3,80}?)[\"”']? (?:at|with) (?P<company>[^\.\n,!;]{2,60})",
     r"(?:applying|applied|application) (?:for|to) (?:the )?[\"“']?(?P<title>[^\"”'\n\.,]{3,80}?)[\"”']?(?: position| role)? (?:at|with) (?P<company>[^\.\n,!;]{2,60})",
 )]
+LINKEDIN_SENT = re.compile(r"your application was sent to\s+", re.I)
 SENDER_NOISE = re.compile(r"\b(recruiting|recruitment|recruiter|careers?|talent( acquisition)?|hr|human resources|jobs|hiring|team|no[- ]?reply|notifications?|noreply|people|staffing)\b", re.I)
 GENERIC_DOMAINS = {"gmail", "googlemail", "yahoo", "outlook", "hotmail", "icloud", "proton", "protonmail", "live", "aol"}
 ATS_DOMAINS = {
@@ -59,6 +60,31 @@ def _from_patterns(patterns, text):
     return None, None
 
 
+def _linkedin_confirmation_title(body: str, company: Optional[str]) -> Optional[str]:
+    """Extract a title from LinkedIn's confirmation-card layout.
+
+    Example: "sent to Acme Backend Engineer (Remote) Acme Pakistan View job".
+    The repeated company name gives us a dependable boundary for the job title.
+    """
+    if not company:
+        return None
+    marker = LINKEDIN_SENT.search(body or "")
+    if not marker:
+        return None
+    tail = (body or "")[marker.end():]
+    end = re.search(r"\s+view job\b", tail, re.I)
+    if not end:
+        return None
+    card = tail[:end.start()].strip()
+    if not card.lower().startswith(company.lower()):
+        return None
+    remainder = card[len(company):].strip()
+    repeated_company = remainder.lower().find(company.lower())
+    if repeated_company <= 0:
+        return None
+    return _clean(remainder[:repeated_company])
+
+
 def extract(sender: str, subject: str, body: str) -> Extracted:
     title, company = _from_patterns(SUBJECT_PATTERNS, subject or "")
     if not (title and company):
@@ -71,4 +97,6 @@ def extract(sender: str, subject: str, body: str) -> Extracted:
             company = cleaned
         elif label and label not in GENERIC_DOMAINS and label not in ATS_DOMAINS:
             company = label.title()
+    if not title:
+        title = _linkedin_confirmation_title(body or "", company)
     return Extracted(company=company, job_title=title)

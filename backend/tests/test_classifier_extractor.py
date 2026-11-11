@@ -35,3 +35,9 @@ def test_extract_title_after_dash():
 def test_extract_company_from_sender_fallback():
     assert extract("Globex Careers <noreply@globex.com>", "Update on your application", "").company == "Globex"
     assert extract("no-reply@greenhouse.io", "Update", "").company is None
+
+
+def test_extract_linkedin_confirmation_title_from_email_card():
+    body = "Your application was sent to Hire Feed Software Engineer - E-Commerce (Remote) Hire Feed Pakistan View job"
+    extracted = extract("LinkedIn <jobs-noreply@linkedin.com>", "Your application was sent to Hire Feed", body)
+    assert (extracted.job_title, extracted.company) == ("Software Engineer - E-Commerce (Remote)", "Hire Feed")
