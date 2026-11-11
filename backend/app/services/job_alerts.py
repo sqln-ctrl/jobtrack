@@ -25,6 +25,7 @@ class AlertListing:
     job_title: str
     company_name: Optional[str]
     location: Optional[str]
+    description: Optional[str]
     job_url: str
 
 
@@ -50,6 +51,14 @@ def _title_and_company(label: str) -> Tuple[str, Optional[str]]:
     return parts[0][:255], (parts[1][:255] if len(parts) == 2 else None)
 
 
+def _description(card_html: str) -> Optional[str]:
+    """Keep a compact, readable excerpt from the remainder of a LinkedIn job card."""
+    value = _text(card_html)
+    value = re.sub(r"\b(?:apply(?: now)?|view job|learn more|see job)\b", "", value, flags=re.I)
+    value = SPACE.sub(" ", value).strip(" -|·")
+    return value[:360] or None
+
+
 def extract_linkedin_listings(html_body: str) -> List[AlertListing]:
     """Return job-view links and their labels from a LinkedIn email's HTML body.
 
@@ -57,13 +66,17 @@ def extract_linkedin_listings(html_body: str) -> List[AlertListing]:
     rely on is the job-view URL. Company and location are optional enrichment.
     """
     listings, seen = [], set()
-    for _, raw_url, label in ANCHOR.findall(html_body or ""):
+    links = list(ANCHOR.finditer(html_body or ""))
+    for index, match in enumerate(links):
+        raw_url, label = match.group(2), match.group(3)
         url = html.unescape(raw_url).strip()
         if not _is_job_url(url) or url in seen:
             continue
         seen.add(url)
         title, company = _title_and_company(label)
-        listings.append(AlertListing(title, company, None, url[:2048]))
+        next_start = links[index + 1].start() if index + 1 < len(links) else min(len(html_body), match.end() + 1200)
+        description = _description(html_body[match.end():next_start])
+        listings.append(AlertListing(title, company, None, description, url[:2048]))
     return listings
 
 
@@ -76,7 +89,7 @@ def store_listings(db: Session, user_id: int, message, listings: List[AlertListi
         db.add(JobAlert(
             user_id=user_id, gmail_message_id=message.id, gmail_thread_id=message.thread_id or None,
             position=position, job_title=listing.job_title, company_name=listing.company_name,
-            location=listing.location, job_url=listing.job_url, received_at=message.received_at,
+            location=listing.location, description=listing.description, job_url=listing.job_url, received_at=message.received_at,
         ))
     return len(listings)
 
@@ -91,5 +104,5 @@ def list_alerts(db: Session, user_id: int, page: int, page_size: int) -> Tuple[L
 def alert_to_out(alert: JobAlert) -> JobAlertOut:
     return JobAlertOut(
         id=alert.id, job_title=alert.job_title, company_name=alert.company_name,
-        location=alert.location, job_url=alert.job_url, received_at=alert.received_at,
+        location=alert.location, description=alert.description, job_url=alert.job_url, received_at=alert.received_at,
     )
