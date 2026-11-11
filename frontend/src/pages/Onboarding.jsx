@@ -7,7 +7,7 @@ export default function Onboarding() {
   return (
     <div className="mx-auto grid min-h-screen max-w-2xl content-center px-6 py-12">
       <h1 className="text-3xl font-bold sm:text-4xl">Let JobTrack read your job emails</h1>
-      <p className="mt-3 text-muted">Connect Gmail and JobTrack will spot confirmations, interview invitations, assessments, rejections and offers, then update the matching application for you.</p>
+      <p className="mt-3 text-muted">Connect Gmail and JobTrack will spot confirmations, review updates, interview invitations and acceptance emails, then update the matching application for you.</p>
       <dl className="panel mt-8 divide-y divide-line">
         <div className="p-5"><dt className="font-semibold">What JobTrack can do</dt><dd className="mt-1 text-sm text-muted">Read-only access to your mailbox. It looks at messages from the last 90 days that look job-related, and ignores and never stores the rest.</dd></div>
         <div className="p-5"><dt className="font-semibold">What it can never do</dt><dd className="mt-1 text-sm text-muted">Send, delete or change any email. Your access tokens stay encrypted on the server and are never sent to your browser.</dd></div>

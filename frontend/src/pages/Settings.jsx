@@ -66,7 +66,7 @@ export default function Settings() {
             </div>
           ) : (
             <div className="mt-3">
-              <p className="text-sm text-muted">Connect Gmail so JobTrack can find confirmations, interview invitations, assessments, rejections and offers, and update the matching application. Access is read-only and limited to job-related messages from the last 90 days.</p>
+              <p className="text-sm text-muted">Connect Gmail so JobTrack can find confirmations, review updates, interview invitations and acceptance emails, and update the matching application. Access is read-only and limited to job-related messages from the last 90 days.</p>
               <a href="/api/v1/gmail/connect" className="btn btn-primary mt-4">Connect Gmail</a>
             </div>
           )}
