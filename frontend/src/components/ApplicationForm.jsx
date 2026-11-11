@@ -27,7 +27,7 @@ const schema = z.object({
 
 const blank = (a) => ({
   job_title: a?.job_title ?? '', company_name: a?.company_name ?? '', platform_id: a?.platform_id ?? '',
-  application_date: a?.application_date ?? todayISO(), status: a?.status ?? 'applied', employment_type: a?.employment_type ?? '',
+  application_date: a?.application_date ?? todayISO(), status: a?.status ?? 'sent', employment_type: a?.employment_type ?? '',
   location: a?.location ?? '', salary_range: a?.salary_range ?? '', job_url: a?.job_url ?? '', company_website: a?.company_website ?? '',
   contact_person: a?.contact_person ?? '', job_description: a?.job_description ?? '', notes: a?.notes ?? '',
 })
@@ -64,7 +64,7 @@ export default function ApplicationForm({ application, onClose, onSaved }) {
         <Field label="Status" error={errors.status?.message}>
           <select {...register('status')}>{STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}</select>
         </Field>
-        <Field label="Application date" error={errors.application_date?.message} hint="For saved jobs, use the day you saved it.">
+        <Field label="Application date" error={errors.application_date?.message}>
           <input type="date" {...register('application_date')} />
         </Field>
         <Field label="Employment type">

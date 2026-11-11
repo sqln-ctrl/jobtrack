@@ -39,7 +39,7 @@ export default function Applications() {
   return (
     <>
       <PageHeader title="All applications" actions={<button className="btn btn-primary" onClick={() => setEditing('new')}><Icon name="plus" />Add application</button>}>
-        {data ? `${data.total} ${data.total === 1 ? 'application' : 'applications'}${filtered ? ' match your filters' : ''}` : 'Search, filter and update everything you have applied for'}
+        {data ? `${data.total} ${data.total === 1 ? 'application' : 'applications'}${filtered ? ' match your filters' : ''}` : 'See every application and its current status'}
       </PageHeader>
 
       <div className="panel mb-4 grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -55,7 +55,7 @@ export default function Applications() {
       <div className="panel overflow-hidden">
         {isLoading ? <Loading /> : isError ? <Empty title="Could not load applications">{errorMessage(error)}</Empty> : data.items.length === 0 ? (
           filtered ? <Empty title="No applications match" action={<button className="btn btn-secondary" onClick={() => { setQ(''); setParams({}) }}>Clear filters</button>}>Try removing a filter or searching for something else.</Empty>
-            : <Empty title="No applications yet" action={<button className="btn btn-primary" onClick={() => setEditing('new')}><Icon name="plus" />Add application</button>}>Add a job you applied for, or one you want to remember for later.</Empty>
+            : <Empty title="No applications yet" action={<button className="btn btn-primary" onClick={() => setEditing('new')}><Icon name="plus" />Add application</button>}>Add an application to start tracking its status.</Empty>
         ) : (
           <div className="overflow-x-auto"><table className="w-full text-left text-sm">
             <thead className="border-b border-line text-xs text-muted"><tr>
