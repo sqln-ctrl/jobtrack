@@ -13,6 +13,8 @@ class ApplicationRef(BaseModel):
 
 class EmailOut(BaseModel):
     id: int
+    gmail_message_id: str
+    gmail_thread_id: Optional[str]
     sender: str
     subject: str
     excerpt: Optional[str]

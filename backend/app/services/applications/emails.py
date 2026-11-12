@@ -14,7 +14,8 @@ from app.services.applications.service import get_application
 
 def email_to_out(e: Email) -> EmailOut:
     return EmailOut(
-        id=e.id, sender=e.sender, subject=e.subject, excerpt=e.email_body_excerpt, received_at=e.received_at,
+        id=e.id, gmail_message_id=e.gmail_message_id, gmail_thread_id=e.gmail_thread_id,
+        sender=e.sender, subject=e.subject, excerpt=e.email_body_excerpt, received_at=e.received_at,
         classification=e.classification, classification_label=CATEGORY_LABELS.get(e.classification, e.classification),
         classification_confidence=e.classification_confidence, extracted_company=e.extracted_company,
         extracted_job_title=e.extracted_job_title, processing_status=e.processing_status,
