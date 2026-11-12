@@ -47,39 +47,38 @@ export default function ApplicationDetail() {
       </div>
       <ErrorNote>{setStatus.isError ? errorMessage(setStatus.error) : ''}</ErrorNote>
 
-      <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
-        <div className="space-y-6">
-          <section className="panel p-5">
-            <h2 className="text-base font-semibold">Details</h2>
-            <dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3">
-              <Row label="Applied on">{fmtDate(a.application_date)}</Row>
-              <Row label="Location">{a.location}</Row>
-              <Row label="Employment type">{EMPLOYMENT_LABEL[a.employment_type]}</Row>
-              <Row label="Salary range">{a.salary_range}</Row>
-              <Row label="Contact person">{a.contact_person}</Row>
-              <Row label="Job link">{a.job_url && <ExtLink href={a.job_url} />}</Row>
-              <Row label="Company website">{a.company_website && <ExtLink href={a.company_website} />}</Row>
-            </dl>
-            {a.job_description && <div className="mt-5 border-t border-line pt-4"><h3 className="text-sm font-semibold">Job description</h3><p className="mt-1 max-w-prose whitespace-pre-wrap text-sm text-muted">{a.job_description}</p></div>}
-            {a.notes && <div className="mt-5 border-t border-line pt-4"><h3 className="text-sm font-semibold">Notes</h3><p className="mt-1 max-w-prose whitespace-pre-wrap text-sm text-muted">{a.notes}</p></div>}
-          </section>
+      <div className="space-y-6">
+        <section className="panel p-5">
+          <h2 className="text-base font-semibold">Details</h2>
+          <dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3">
+            <Row label="Applied on">{fmtDate(a.application_date)}</Row>
+            <Row label="Location">{a.location}</Row>
+            <Row label="Employment type">{EMPLOYMENT_LABEL[a.employment_type]}</Row>
+            <Row label="Salary range">{a.salary_range}</Row>
+            <Row label="Contact person">{a.contact_person}</Row>
+            <Row label="Job link">{a.job_url && <ExtLink href={a.job_url} />}</Row>
+            <Row label="Company website">{a.company_website && <ExtLink href={a.company_website} />}</Row>
+          </dl>
+          {a.job_description && <div className="mt-5 border-t border-line pt-4"><h3 className="text-sm font-semibold">Job description</h3><p className="mt-1 max-w-prose whitespace-pre-wrap text-sm text-muted">{a.job_description}</p></div>}
+          {a.notes && <div className="mt-5 border-t border-line pt-4"><h3 className="text-sm font-semibold">Notes</h3><p className="mt-1 max-w-prose whitespace-pre-wrap text-sm text-muted">{a.notes}</p></div>}
+        </section>
 
-          <section className="panel">
+        <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1.25fr)_minmax(16rem,0.9fr)] lg:items-start">
+          <section className="panel min-w-0 overflow-hidden">
             <h2 className="px-5 py-4 text-base font-semibold">Gmail conversations</h2>
             {emails.length ? (
-              <ul className="divide-y divide-line border-t border-line">{emails.map((e) => (
-                <li key={e.id} className="px-5 py-4">
+              <ul className="max-h-[min(48vh,30rem)] divide-y divide-line overflow-y-auto border-t border-line">{emails.map((e) => (
+                <li key={e.id} className="min-w-0 px-5 py-4">
                   <div className="flex flex-wrap items-center gap-2"><span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${CATEGORY_TONE[e.classification] ?? DEFAULT_CATEGORY_TONE}`}>{e.classification_label}</span><span className="text-xs text-muted">{fmtDateTime(e.received_at)}</span></div>
-                  <p className="mt-1.5 text-sm font-semibold">{e.subject || '(no subject)'}</p>
-                  <p className="text-xs text-muted">{e.sender}</p>
-                  {e.excerpt && <p className="mt-1 line-clamp-2 text-sm text-muted">{e.excerpt}</p>}
+                  <p className="mt-1.5 truncate text-sm font-semibold" title={e.subject || '(no subject)'}>{e.subject || '(no subject)'}</p>
+                  <p className="truncate text-xs text-muted" title={e.sender}>{e.sender}</p>
+                  {e.excerpt && <p className="mt-1 line-clamp-2 break-words text-sm text-muted">{e.excerpt}</p>}
                 </li>
               ))}</ul>
             ) : <p className="border-t border-line px-5 py-6 text-sm text-muted">No emails linked yet. Matching emails appear here after a Gmail sync.</p>}
           </section>
-        </div>
 
-        <div className="space-y-6">
+          <div className="min-w-0 space-y-6">
           <section className="panel p-5"><h2 className="mb-4 text-base font-semibold">Timeline</h2><Timeline events={timeline} /></section>
           <section className="panel p-5">
             <div className="flex items-center justify-between"><h2 className="text-base font-semibold">Interviews</h2><button className="btn btn-secondary !py-1" onClick={() => setScheduling(true)}>Schedule</button></div>
@@ -91,6 +90,7 @@ export default function ApplicationDetail() {
             ))}</ul> : <p className="mt-2 text-sm text-muted">No interviews scheduled.</p>}
           </section>
         </div>
+      </div>
       </div>
 
       {editing && <ApplicationForm application={a} onClose={() => setEditing(false)} />}
