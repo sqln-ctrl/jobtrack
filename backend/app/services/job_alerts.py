@@ -2,6 +2,7 @@
 import html
 import re
 from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
 from typing import List, Optional, Tuple
 from urllib.parse import urlparse
 
@@ -18,6 +19,7 @@ ANCHOR = re.compile(r"<a\b[^>]*?href\s*=\s*(['\"])(.*?)\1[^>]*>(.*?)</a\s*>", re
 TAG = re.compile(r"(?s)<[^>]+>")
 SPACE = re.compile(r"\s+")
 GENERIC_LINK_TEXT = re.compile(r"^(apply|apply now|view job|view|learn more|see job|linkedin)$", re.I)
+MAX_ALERT_AGE = timedelta(days=7)
 
 
 @dataclass(frozen=True)
@@ -31,6 +33,12 @@ class AlertListing:
 
 def is_linkedin_job_alert(sender: str, subject: str) -> bool:
     return bool(LINKEDIN_SENDER.search(sender or "") and ALERT_SUBJECT.search(subject or ""))
+
+
+def is_recent(received_at: datetime) -> bool:
+    if received_at.tzinfo is None:
+        received_at = received_at.replace(tzinfo=timezone.utc)
+    return received_at >= datetime.now(timezone.utc) - MAX_ALERT_AGE
 
 
 def _text(value: str) -> str:
@@ -95,7 +103,8 @@ def store_listings(db: Session, user_id: int, message, listings: List[AlertListi
 
 
 def list_alerts(db: Session, user_id: int, page: int, page_size: int) -> Tuple[List[JobAlert], int]:
-    stmt = select(JobAlert).where(JobAlert.user_id == user_id)
+    cutoff = datetime.now(timezone.utc) - MAX_ALERT_AGE
+    stmt = select(JobAlert).where(JobAlert.user_id == user_id, JobAlert.received_at >= cutoff)
     total = db.scalar(select(func.count()).select_from(stmt.subquery())) or 0
     rows = db.scalars(stmt.order_by(JobAlert.received_at.desc(), JobAlert.position).offset((page - 1) * page_size).limit(page_size)).all()
     return list(rows), total

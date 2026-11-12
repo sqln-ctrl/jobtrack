@@ -13,7 +13,7 @@ export default function JobAlerts() {
 
   return (
     <>
-      <PageHeader title="Job alerts" actions={<SyncButton />}>
+      <PageHeader title="Job alerts · Past 7 days" actions={<SyncButton />}>
         {gmail?.connected
           ? `LinkedIn recommendations from ${gmail.gmail_email}${gmail.last_synced_at ? ` · last synced ${timeAgo(gmail.last_synced_at)}` : ''}`
           : 'Connect Gmail to import LinkedIn job alerts.'}

@@ -1,4 +1,4 @@
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 from sqlalchemy import select
 
@@ -7,6 +7,7 @@ from app.core.security import encrypt
 from app.services.applications.matcher import match_application
 from app.services.email_classifier.extractor import extract
 from app.services.gmail.sync import GmailSyncService
+from app.services import job_alerts as job_alert_service
 from tests.conftest import make_user
 
 
@@ -176,6 +177,27 @@ def test_linkedin_alert_syncs_listings_without_creating_email_activity(db, user)
     assert alerts[0].description == "Build reliable services for a growing product team."
     assert alerts[0].job_url.startswith("https://www.linkedin.com/jobs/view/12345")
     assert db.query(Email).count() == 0
+
+
+def test_linkedin_alerts_older_than_a_week_are_not_imported(db, user):
+    connect(db, user)
+    html = '<a href="https://www.linkedin.com/jobs/view/12345">Backend Engineer at Acme</a>'
+    old_timestamp = int((datetime.now(timezone.utc) - timedelta(days=8)).timestamp())
+    result = run(db, user, FakeClient({"m1": raw_html("m1", "LinkedIn Job Alerts <jobalerts-noreply@linkedin.com>", "Job alert: new jobs for you", html, old_timestamp)}))
+    assert result.job_alerts == 0
+    assert db.query(JobAlert).count() == 0
+
+
+def test_job_alert_list_excludes_entries_older_than_a_week(db, user):
+    now = datetime.now(timezone.utc)
+    recent = JobAlert(user_id=user.id, gmail_message_id="recent", position=0, job_title="Recent role", job_url="https://www.linkedin.com/jobs/view/1", received_at=now)
+    old = JobAlert(user_id=user.id, gmail_message_id="old", position=0, job_title="Old role", job_url="https://www.linkedin.com/jobs/view/2", received_at=now - timedelta(days=8))
+    db.add_all([recent, old])
+    db.commit()
+
+    alerts, total = job_alert_service.list_alerts(db, user.id, page=1, page_size=20)
+    assert total == 1
+    assert [alert.job_title for alert in alerts] == ["Recent role"]
 
 
 def test_confirmation_email_creates_and_updates_an_application_for_overview(db, user):
