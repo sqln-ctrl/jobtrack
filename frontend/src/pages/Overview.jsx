@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { useApplications, useAutoSyncGmail, useInterviews, usePlatformDistribution, useRecentActivity, useStats, useStatusDistribution } from '../hooks/useData'
+import { useApplications, useInterviews, usePlatformDistribution, useRecentActivity, useStats, useStatusDistribution } from '../hooks/useData'
 import { applicationSource, STATUS_BY_VALUE, CATEGORY_TONE, DEFAULT_CATEGORY_TONE } from '../utils/constants'
 import { fmtDateTime, timeAgo } from '../utils/format'
 import ApplicationForm from '../components/ApplicationForm'
@@ -46,7 +46,6 @@ export default function Overview() {
   const dist = useStatusDistribution()
   const platforms = usePlatformDistribution()
   const applications = useApplications({ sort: 'updated', page: applicationPage, page_size: 10 })
-  const gmail = useAutoSyncGmail()
   const activity = useRecentActivity()
   const upcoming = useInterviews({ upcoming: true, limit: 5 })
 
@@ -69,8 +68,6 @@ export default function Overview() {
       </>}>
         {stats.data ? `${stats.data.awaiting_response} waiting to hear back${stats.data.emails_needing_review ? ` · ${stats.data.emails_needing_review} emails need your review` : ''}` : 'Your job search at a glance'}
       </PageHeader>
-      {gmail?.connected && <p className="-mt-4 mb-6 text-sm text-muted">Gmail checks for updates every five minutes while this page is open.</p>}
-
       {!stats.data ? <Loading /> : empty ? (
         <div className="panel"><Empty title="Add your first application" action={<button className="btn btn-primary" onClick={() => setAdding(true)}><Icon name="plus" />Add application</button>}>
           Track where you applied and what happened next. Connect Gmail in Settings and replies will update your applications for you.
