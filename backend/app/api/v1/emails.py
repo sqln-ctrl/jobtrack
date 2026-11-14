@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user
 from app.db.session import get_db
 from app.models.user import User
-from app.schemas.email import EmailOut, EmailPage, MatchRequest
+from app.schemas.email import EmailOut, EmailPage
 from app.services.applications import emails as svc
 
 router = APIRouter(prefix="/emails", tags=["emails"])
@@ -30,13 +30,3 @@ def list_emails(
 @router.get("/{email_id}", response_model=EmailOut)
 def get_email(email_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     return svc.email_to_out(svc.get_email(db, user.id, email_id))
-
-
-@router.post("/{email_id}/match", response_model=EmailOut)
-def match_email(email_id: int, data: MatchRequest, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    return svc.email_to_out(svc.match_email(db, user.id, email_id, data.application_id))
-
-
-@router.post("/{email_id}/ignore", response_model=EmailOut)
-def ignore_email(email_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    return svc.email_to_out(svc.ignore_email(db, user.id, email_id))

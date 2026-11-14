@@ -29,7 +29,7 @@ Tests: `cd backend && pytest` (uses in-memory SQLite, no Google credentials need
 
 ## Behaviour worth knowing
 
-- **Ambiguous emails are never auto-applied.** Two candidate applications, or only a weak company mention, sends the email to *Needs review*.
+- **Gmail matching is automatic.** Each job-related email is linked to the strongest matching application; equally likely matches use the most recently submitted application. Messages with no candidate remain visible as *Unmatched* and are retried after later syncs.
 - **Emails only move statuses forward.** They never downgrade progress or overwrite Rejected, Offer or Withdrawn.
 - **Saving a job never marks it Applied.** A confirmation email does (reliable evidence).
 - **Unrelated mail is never stored.** Only job-related emails are saved, with a 1,500-character excerpt.

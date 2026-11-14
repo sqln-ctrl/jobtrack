@@ -66,7 +66,7 @@ export default function Overview() {
         <SyncButton />
         <button className="btn btn-primary" onClick={() => setAdding(true)}><Icon name="plus" />Add application</button>
       </>}>
-        {stats.data ? `${stats.data.awaiting_response} waiting to hear back${stats.data.emails_needing_review ? ` · ${stats.data.emails_needing_review} emails need your review` : ''}` : 'Your job search at a glance'}
+        {stats.data ? `${stats.data.awaiting_response} waiting to hear back${stats.data.emails_needing_review ? ` · ${stats.data.emails_needing_review} emails are waiting for a matching application` : ''}` : 'Your job search at a glance'}
       </PageHeader>
       {!stats.data ? <Loading /> : empty ? (
         <div className="panel"><Empty title="Add your first application" action={<button className="btn btn-primary" onClick={() => setAdding(true)}><Icon name="plus" />Add application</button>}>
@@ -131,7 +131,7 @@ export default function Overview() {
                 <li key={e.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 px-5 py-3">
                   <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${CATEGORY_TONE[e.classification] ?? DEFAULT_CATEGORY_TONE}`}>{e.classification_label}</span>
                   <span className="min-w-0 flex-1 truncate text-sm font-medium">{e.subject || '(no subject)'}</span>
-                  <span className="text-xs text-muted">{e.applications[0] ? `${e.applications[0].company_name}` : 'Needs review'} · {timeAgo(e.received_at)}</span>
+                  <span className="text-xs text-muted">{e.applications[0] ? `${e.applications[0].company_name}` : 'Unmatched'} · {timeAgo(e.received_at)}</span>
                 </li>
               ))}</ul>
             ) : <p className="border-t border-line px-5 py-6 text-sm text-muted">No job emails yet. Connect Gmail in Settings, then choose Sync Gmail.</p>}

@@ -4,9 +4,11 @@ Scoring (highest applicable wins):
   0.95  the application's job URL appears in the email, or exact job title + company
   0.80  company + related job title
   0.65  company found in the sender name/domain only
-  0.55  company found only in the text (never auto-applied)
-An email is auto-linked only if the best score >= THRESHOLD and it beats the runner-up by
-at least GAP. Everything else is left for manual review.
+  0.55  company found only in the text
+
+Every credible candidate is linked automatically. When more than one application has the
+same score, the most recently submitted application wins so matching is deterministic.
+Emails with no candidate remain unmatched and are retried after later Gmail syncs.
 """
 import re
 from dataclasses import dataclass, field
@@ -16,8 +18,7 @@ from app.email_text import norm
 from app.models.application import JobApplication
 from app.services.email_classifier.extractor import Extracted, sender_parts
 
-THRESHOLD = 0.65
-GAP = 0.10
+THRESHOLD = 0.55
 
 STOP = {"the", "a", "an", "and", "of", "for", "at", "with", "in", "to"}
 LEGAL = {"inc", "llc", "ltd", "limited", "pvt", "private", "corp", "corporation", "co", "plc", "gmbh"}
@@ -93,12 +94,12 @@ def match_application(
         if score > 0:
             scored.append((app, score))
 
-    scored.sort(key=lambda pair: pair[1], reverse=True)
+    # A title/company signal takes priority. For equally likely candidates, prefer the
+    # newest application rather than requiring the user to resolve a manual queue.
+    scored.sort(key=lambda pair: (pair[1], pair[0].application_date, pair[0].id), reverse=True)
     if not scored:
         return MatchResult(None, 0.0)
     top_app, top = scored[0]
     if top < THRESHOLD:
         return MatchResult(None, top, False, scored)
-    if len(scored) > 1 and top - scored[1][1] < GAP:
-        return MatchResult(None, top, True, scored)
     return MatchResult(top_app, top, False, scored)

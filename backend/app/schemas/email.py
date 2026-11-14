@@ -33,7 +33,3 @@ class EmailPage(BaseModel):
     total: int
     page: int
     page_size: int
-
-
-class MatchRequest(BaseModel):
-    application_id: int

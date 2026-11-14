@@ -91,15 +91,6 @@ def test_dashboard_and_interviews(client):
     assert len(client.get("/api/v1/interviews", params={"upcoming": True}).json()) == 1
 
 
-def test_manual_email_match_updates_status(db, client, user):
-    from app.models import Email
-    from datetime import datetime, timezone
-    a = client.post("/api/v1/applications", json=payload(platform_id(client))).json()["id"]
-    e = Email(user_id=user.id, gmail_message_id="x", sender="hr@x.com", subject="Interview Invitation", received_at=datetime.now(timezone.utc),
-              classification="interview_invitation", processing_status="needs_review")
-    db.add(e)
-    db.commit()
-    r = client.post(f"/api/v1/emails/{e.id}/match", json={"application_id": a})
-    assert r.status_code == 200 and r.json()["processing_status"] == "matched"
-    assert client.get(f"/api/v1/applications/{a}").json()["application"]["status"] == "interview_call"
-    assert client.post(f"/api/v1/emails/{e.id}/ignore").json()["processing_status"] == "ignored"
+def test_manual_email_match_actions_are_not_exposed(client):
+    assert client.post("/api/v1/emails/1/match", json={"application_id": 1}).status_code == 404
+    assert client.post("/api/v1/emails/1/ignore").status_code == 404

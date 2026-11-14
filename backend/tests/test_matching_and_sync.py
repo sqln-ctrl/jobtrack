@@ -30,17 +30,17 @@ def test_exact_title_and_company(db, user):
     assert r.application is a and r.confidence >= 0.95
 
 
-def test_two_roles_same_company_is_ambiguous(db, user):
+def test_two_roles_same_company_auto_matches_the_most_recent_application(db, user):
     a = add_app(db, user, "Backend Developer", "ABC")
     b = add_app(db, user, "Data Engineer", "ABC")
     r = match([a, b], "ABC <hr@abc.com>", "An update on your application")
-    assert r.application is None and r.ambiguous
+    assert r.application is b and not r.ambiguous
 
 
-def test_company_only_in_text_is_not_auto_matched(db, user):
+def test_company_only_in_text_is_auto_matched(db, user):
     a = add_app(db, user, "Backend Developer", "Globex")
     r = match([a], "recruiter@staffing-agency.com", "Hello", "I am reaching out about a role at Globex")
-    assert r.application is None
+    assert r.application is a
 
 
 def test_job_url_match(db, user):
@@ -151,15 +151,35 @@ def test_sync_refreshes_an_existing_application_from_linked_gmail_evidence(db, u
     assert history[-1].change_source == "gmail"
 
 
-def test_ambiguous_email_goes_to_review_without_touching_applications(db, user):
+def test_ambiguous_email_is_matched_automatically(db, user):
     a = add_app(db, user, "Backend Developer", "ABC")
     b = add_app(db, user, "Data Engineer", "ABC")
     connect(db, user)
     run(db, user, FakeClient({"m1": raw("m1", "ABC <hr@abc.com>", "Update on your application", "Unfortunately we will not be moving forward.", 1_800_000_100)}))
     email = db.scalar(select(Email))
-    assert email.processing_status == "needs_review"
+    assert email.processing_status == "matched"
+    assert email.links[0].application_id == b.id
     db.refresh(a), db.refresh(b)
     assert a.status == b.status == "sent"
+
+
+def test_sync_retries_unmatched_email_after_an_application_is_added(db, user):
+    connect(db, user)
+    message = raw(
+        "m1", "Globex Careers <jobs@globex.com>", "Your application is under review",
+        "We are reviewing your application for Backend Developer.", 1_800_000_100,
+    )
+    run(db, user, FakeClient({"m1": message}))
+    email = db.scalar(select(Email))
+    assert email.processing_status == "needs_review"
+
+    app = add_app(db, user, "Backend Developer", "Globex")
+    run(db, user, FakeClient({}))
+
+    db.refresh(email), db.refresh(app)
+    assert email.processing_status == "matched"
+    assert email.links[0].application_id == app.id
+    assert app.status == "viewed"
 
 
 def test_expired_history_falls_back_to_full_sync(db, user):

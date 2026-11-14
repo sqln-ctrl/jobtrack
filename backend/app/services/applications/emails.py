@@ -6,10 +6,8 @@ from sqlalchemy.orm import Session, selectinload
 from app.core.errors import NotFound
 from app.models.application import ApplicationEmail
 from app.models.email import Email
-from app.models.enums import CATEGORY_LABELS, ProcessingStatus
+from app.models.enums import CATEGORY_LABELS
 from app.schemas.email import ApplicationRef, EmailOut
-from app.services.applications.email_linking import link_email
-from app.services.applications.service import get_application
 
 
 def email_to_out(e: Email) -> EmailOut:
@@ -49,23 +47,3 @@ def list_emails(
     total = db.scalar(select(func.count()).select_from(stmt.subquery())) or 0
     rows = db.scalars(stmt.options(_load()).order_by(Email.received_at.desc()).offset((page - 1) * page_size).limit(page_size)).all()
     return list(rows), total
-
-
-def match_email(db: Session, user_id: int, email_id: int, application_id: int) -> Email:
-    email = get_email(db, user_id, email_id)
-    app = get_application(db, user_id, application_id)
-    for stale in [l for l in email.links if l.application_id != app.id]:  # a manual match replaces earlier links
-        db.delete(stale)
-    db.flush()
-    link_email(db, email, app, confidence=1.0)
-    db.commit()
-    return get_email(db, user_id, email_id)
-
-
-def ignore_email(db: Session, user_id: int, email_id: int) -> Email:
-    email = get_email(db, user_id, email_id)
-    for link in list(email.links):
-        db.delete(link)
-    email.processing_status = ProcessingStatus.IGNORED.value
-    db.commit()
-    return get_email(db, user_id, email_id)
