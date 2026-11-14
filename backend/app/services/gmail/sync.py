@@ -46,6 +46,7 @@ class SyncResult:
     applications_created: int = 0
     confirmations_enriched: int = 0
     status_updates: int = 0
+    reclassified: int = 0
 
 
 def begin_sync(db: Session, user_id: int) -> GmailConnection:
@@ -85,9 +86,10 @@ class GmailSyncService:
             ids = self._collect_ids(client, conn)
             result.fetched = len(ids)
             self._process_ids(client, conn.user_id, ids, result)
+            result.reclassified = self._refresh_stored_classifications(conn.user_id)
             result.confirmations_enriched = self._enrich_confirmations(conn.user_id)
             result.applications_created = self._track_confirmed_applications(conn.user_id)
-            result.matched += self._match_pending_emails(conn.user_id)
+            result.matched += self._reconcile_email_matches(conn.user_id)
             result.status_updates = self._refresh_linked_application_statuses(conn.user_id)
 
             conn.history_id = latest_history_id or conn.history_id
@@ -239,26 +241,63 @@ class GmailSyncService:
             self.db.commit()
         return enriched
 
-    def _match_pending_emails(self, user_id: int) -> int:
-        """Replay pending Gmail replies after confirmation emails create applications."""
-        apps = list(self.db.scalars(select(JobApplication).where(JobApplication.user_id == user_id)))
-        if not apps:
-            return 0
-        emails = list(self.db.scalars(select(Email).where(
-            Email.user_id == user_id, Email.processing_status == ProcessingStatus.NEEDS_REVIEW.value,
-        ).order_by(Email.received_at)))
-        matched = 0
+    def _refresh_stored_classifications(self, user_id: int) -> int:
+        """Apply newer classification rules to messages imported by earlier syncs."""
+        emails = list(self.db.scalars(select(Email).where(Email.user_id == user_id)))
+        updated = 0
         for email in emails:
-            extracted = Extracted(company=email.extracted_company, job_title=email.extracted_job_title)
+            classification = self.classifier.classify(email.sender, email.subject, email.email_body_excerpt or "")
+            if email.classification != classification.category.value or email.classification_confidence != classification.confidence:
+                email.classification = classification.category.value
+                email.classification_confidence = classification.confidence
+                updated += 1
+        if updated:
+            self.db.commit()
+        return updated
+
+    def _reconcile_email_matches(self, user_id: int) -> int:
+        """Keep all imported Gmail messages linked to their current best application.
+
+        Matching rules and the application list can both change after an email is
+        imported. Re-running this step on every sync corrects prior links and lets
+        previously unmatched emails attach automatically as soon as an application
+        is available.
+        """
+        apps = list(self.db.scalars(select(JobApplication).where(JobApplication.user_id == user_id)))
+        emails = list(self.db.scalars(select(Email).where(
+            Email.user_id == user_id,
+        ).order_by(Email.received_at)))
+        reconciled = 0
+        for email in emails:
+            extracted = extract(email.sender, email.subject, email.email_body_excerpt or "")
             match = match_application(
                 apps, sender=email.sender, subject=email.subject, body=email.email_body_excerpt or "", extracted=extracted,
             )
             if match.application is not None:
-                link_email(self.db, email, match.application, match.confidence)
-                matched += 1
-        if matched:
+                current = next((link for link in email.links if link.application_id == match.application.id), None)
+                stale = [link for link in email.links if link.application_id != match.application.id]
+                for link in stale:
+                    self.db.delete(link)
+                if current is None:
+                    link_email(self.db, email, match.application, match.confidence)
+                    reconciled += 1
+                else:
+                    changed = current.match_confidence != match.confidence or email.processing_status != ProcessingStatus.MATCHED.value
+                    current.match_confidence = match.confidence
+                    email.processing_status = ProcessingStatus.MATCHED.value
+                    if stale or changed:
+                        reconciled += 1
+            elif email.links:
+                for link in list(email.links):
+                    self.db.delete(link)
+                email.processing_status = ProcessingStatus.NEEDS_REVIEW.value
+                reconciled += 1
+            elif email.processing_status != ProcessingStatus.NEEDS_REVIEW.value:
+                email.processing_status = ProcessingStatus.NEEDS_REVIEW.value
+                reconciled += 1
+        if reconciled:
             self.db.commit()
-        return matched
+        return reconciled
 
     def _refresh_linked_application_statuses(self, user_id: int) -> int:
         """Reapply Gmail evidence to existing applications after every sync.

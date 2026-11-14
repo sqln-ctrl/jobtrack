@@ -151,6 +151,31 @@ def test_sync_refreshes_an_existing_application_from_linked_gmail_evidence(db, u
     assert history[-1].change_source == "gmail"
 
 
+def test_sync_reclassifies_and_rematches_existing_gmail_evidence(db, user):
+    correct = add_app(db, user, "Business Development Officer", "Universal Visa Consultants")
+    wrong = add_app(db, user, "Business Development Specialist", "EBC Financial Group")
+    connect(db, user)
+    email = Email(
+        user_id=user.id, gmail_message_id="viewed", gmail_thread_id="t-viewed",
+        sender="LinkedIn <jobs-noreply@linkedin.com>", subject="Your application was viewed by Universal Visa Consultants",
+        email_body_excerpt="", received_at=datetime.now(timezone.utc), classification="other_job_related",
+        classification_confidence=0.5, processing_status="matched",
+    )
+    db.add(email)
+    db.flush()
+    db.add(ApplicationEmail(application_id=wrong.id, email_id=email.id, match_confidence=1.0))
+    db.commit()
+
+    result = run(db, user, FakeClient({}))
+
+    db.refresh(email), db.refresh(correct), db.refresh(wrong)
+    assert result.reclassified == 1
+    assert email.classification == "under_review"
+    assert [link.application_id for link in email.links] == [correct.id]
+    assert correct.status == "viewed"
+    assert wrong.status == "sent"
+
+
 def test_ambiguous_email_is_matched_automatically(db, user):
     a = add_app(db, user, "Backend Developer", "ABC")
     b = add_app(db, user, "Data Engineer", "ABC")
