@@ -3,6 +3,7 @@ export const STATUSES = [
   { value: 'viewed', label: 'Viewed', badge: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-500/15 dark:text-indigo-300', bar: 'bg-indigo-500' },
   { value: 'interview_call', label: 'Interview call', badge: 'bg-teal-100 text-teal-800 dark:bg-teal-500/15 dark:text-teal-300', bar: 'bg-teal-500' },
   { value: 'accepted', label: 'Accepted', badge: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300', bar: 'bg-emerald-500' },
+  { value: 'rejected', label: 'Rejected', badge: 'bg-rose-100 text-rose-800 dark:bg-rose-500/15 dark:text-rose-300', bar: 'bg-rose-500' },
 ]
 export const STATUS_BY_VALUE = Object.fromEntries(STATUSES.map((s) => [s.value, s]))
 

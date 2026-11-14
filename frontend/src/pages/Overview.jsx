@@ -10,7 +10,7 @@ import { Empty, Icon, Loading, PageHeader, Pagination, PlatformMark, StatusBadge
 
 const TILES = [
   ['total', 'Total applications'], ['this_week', 'This week'], ['interview_calls', 'Interview calls'],
-  ['accepted', 'Accepted'], ['awaiting_response', 'Awaiting response'],
+  ['accepted', 'Accepted'], ['rejected', 'Rejected'], ['awaiting_response', 'Awaiting response'],
 ]
 
 function Pipeline({ items }) {
@@ -83,7 +83,7 @@ export default function Overview() {
 
           <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
             <section className="panel">
-              <div className="flex items-center justify-between px-5 py-4"><div><h2 className="text-base font-semibold">Applications</h2><p className="mt-0.5 text-xs text-muted">Sent, Viewed, Interview call and Accepted</p></div><Link to="/applications" className="text-sm font-medium text-accent hover:underline">Manage applications</Link></div>
+              <div className="flex items-center justify-between px-5 py-4"><div><h2 className="text-base font-semibold">Applications</h2><p className="mt-0.5 text-xs text-muted">Sent, Viewed, Interview call, Accepted and Rejected</p></div><Link to="/applications" className="text-sm font-medium text-accent hover:underline">Manage applications</Link></div>
               <div className="overflow-x-auto"><table className="w-full text-left text-sm">
                 <thead className="border-y border-line text-xs text-muted"><tr><th className="px-5 py-2 font-medium">Company</th><th className="px-3 py-2 font-medium">Position</th><th className="px-3 py-2 font-medium">Applied via</th><th className="px-3 py-2 font-medium">Status</th><th className="px-5 py-2 font-medium">Activity</th></tr></thead>
                 <tbody className="divide-y divide-line">
