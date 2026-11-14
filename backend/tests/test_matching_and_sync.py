@@ -2,7 +2,7 @@ from datetime import date, datetime, timedelta, timezone
 
 from sqlalchemy import select
 
-from app.models import ApplicationHistory, Email, GmailConnection, JobAlert, JobApplication, Platform
+from app.models import ApplicationEmail, ApplicationHistory, Email, GmailConnection, JobAlert, JobApplication, Platform
 from app.core.security import encrypt
 from app.services.applications.matcher import match_application
 from app.services.email_classifier.extractor import extract
@@ -125,6 +125,30 @@ def test_sync_is_idempotent_and_never_downgrades(db, user):
     assert db.query(Email).count() == 1
     db.refresh(app)
     assert app.status == "accepted"  # an accepted application is never downgraded by an email
+
+
+def test_sync_refreshes_an_existing_application_from_linked_gmail_evidence(db, user):
+    app = add_app(db, user, "Backend Developer", "ABC")
+    connect(db, user)
+    email = Email(
+        user_id=user.id, gmail_message_id="existing", gmail_thread_id="t-existing",
+        sender="ABC Recruiting <jobs@abc.com>", subject="Your application was viewed",
+        email_body_excerpt="The hiring team viewed your application.", received_at=datetime.now(timezone.utc),
+        classification="under_review", classification_confidence=0.9,
+        processing_status="matched",
+    )
+    db.add(email)
+    db.flush()
+    db.add(ApplicationEmail(application_id=app.id, email_id=email.id, match_confidence=0.95))
+    db.commit()
+
+    result = run(db, user, FakeClient({}))
+
+    db.refresh(app)
+    assert result.status_updates == 1
+    assert app.status == "viewed"
+    history = list(db.scalars(select(ApplicationHistory).where(ApplicationHistory.application_id == app.id)))
+    assert history[-1].change_source == "gmail"
 
 
 def test_ambiguous_email_goes_to_review_without_touching_applications(db, user):

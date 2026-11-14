@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.core.errors import Conflict, NotFound
-from app.models.application import ApplicationHistory, JobApplication, Platform
+from app.models.application import ApplicationEmail, ApplicationHistory, JobApplication, Platform
 from app.models.email import Email
 from app.models.enums import ApplicationStatus, ChangeSource, EmailCategory, ProcessingStatus, SyncStatus
 from app.models.gmail import GmailConnection
@@ -17,6 +17,8 @@ from app.email_text import norm
 from app.services import job_alerts
 from app.services.applications.email_linking import link_email
 from app.services.applications.matcher import match_application
+from app.services.applications.service import change_status
+from app.services.applications.status_rules import next_status_for
 from app.services.email_classifier.classifier import EmailClassifier, RuleBasedClassifier
 from app.services.email_classifier.extractor import Extracted, extract
 from app.services.gmail.client import GmailAuthError, GmailClient, GmailError, HistoryExpired, ParsedMessage, parse_message
@@ -43,6 +45,7 @@ class SyncResult:
     job_alerts: int = 0
     applications_created: int = 0
     confirmations_enriched: int = 0
+    status_updates: int = 0
 
 
 def begin_sync(db: Session, user_id: int) -> GmailConnection:
@@ -85,6 +88,7 @@ class GmailSyncService:
             result.confirmations_enriched = self._enrich_confirmations(conn.user_id)
             result.applications_created = self._track_confirmed_applications(conn.user_id)
             result.matched += self._match_pending_emails(conn.user_id)
+            result.status_updates = self._refresh_linked_application_statuses(conn.user_id)
 
             conn.history_id = latest_history_id or conn.history_id
             conn.last_synced_at = datetime.now(timezone.utc)
@@ -255,6 +259,33 @@ class GmailSyncService:
         if matched:
             self.db.commit()
         return matched
+
+    def _refresh_linked_application_statuses(self, user_id: int) -> int:
+        """Reapply Gmail evidence to existing applications after every sync.
+
+        A message may have been imported before its application was added or before
+        the classification rules recognized its signal. Rechecking linked messages
+        keeps the application current without allowing an older email to downgrade it.
+        """
+        links = list(self.db.scalars(
+            select(ApplicationEmail)
+            .join(JobApplication)
+            .join(Email)
+            .where(JobApplication.user_id == user_id)
+            .order_by(Email.received_at.asc(), ApplicationEmail.id.asc())
+        ))
+        updates = 0
+        for link in links:
+            email, app = link.email, link.application
+            new_status = next_status_for(EmailCategory(email.classification), ApplicationStatus(app.status))
+            if new_status and change_status(
+                self.db, app, new_status, ChangeSource.GMAIL,
+                f"Detected from email: {email.subject[:120]}", at=email.received_at,
+            ):
+                updates += 1
+        if updates:
+            self.db.commit()
+        return updates
 
 
 def run_sync_in_background(user_id: int) -> None:
