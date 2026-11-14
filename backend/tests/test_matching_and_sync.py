@@ -127,6 +127,22 @@ def test_sync_is_idempotent_and_never_downgrades(db, user):
     assert app.status == "accepted"  # an accepted application is never downgraded by an email
 
 
+def test_sync_marks_an_application_rejected_from_gmail(db, user):
+    app = add_app(db, user, "Backend Developer", "ABC")
+    connect(db, user)
+    message = raw(
+        "m1", "ABC Recruiting <jobs@abc.com>", "Your application to Backend Developer at ABC",
+        "After careful consideration, we have decided to move forward with other candidates.", 1_800_000_100,
+    )
+
+    run(db, user, FakeClient({"m1": message}))
+
+    db.refresh(app)
+    assert app.status == "rejected"
+    history = list(db.scalars(select(ApplicationHistory).where(ApplicationHistory.application_id == app.id)))
+    assert ("sent", "rejected", "gmail") in [(h.previous_status, h.new_status, h.change_source) for h in history]
+
+
 def test_sync_refreshes_an_existing_application_from_linked_gmail_evidence(db, user):
     app = add_app(db, user, "Backend Developer", "ABC")
     connect(db, user)
@@ -185,7 +201,8 @@ def test_ambiguous_email_is_matched_automatically(db, user):
     assert email.processing_status == "matched"
     assert email.links[0].application_id == b.id
     db.refresh(a), db.refresh(b)
-    assert a.status == b.status == "sent"
+    assert a.status == "sent"
+    assert b.status == "rejected"
 
 
 def test_sync_retries_unmatched_email_after_an_application_is_added(db, user):

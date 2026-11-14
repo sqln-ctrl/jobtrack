@@ -42,6 +42,7 @@ RULES = [
         r"(not|haven't|have not) been selected",
         r"we (are )?unable to (offer|move|proceed)",
         r"will not be (moving|proceeding|taking)",
+        r"application[_ -]?rejected",
     )),
     (C.JOB_OFFER, _rx(
         r"pleased to (offer|extend)", r"\b(job|employment) offer\b", r"\boffer letter\b",

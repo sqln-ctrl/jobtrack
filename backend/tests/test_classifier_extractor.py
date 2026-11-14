@@ -12,6 +12,7 @@ clf = RuleBasedClassifier()
     ("Interview Invitation — Python Developer", "We'd like to invite you for an interview next week.", C.INTERVIEW_INVITATION),
     ("Update on your application", "Unfortunately, we have decided to move forward with other candidates for this position.", C.REJECTION),
     ("Your application to Acme", "After careful consideration we are unable to move forward with your candidacy.", C.REJECTION),
+    ("Your application to Acme", "trk=email_application_rejected_01", C.REJECTION),
     ("Next steps: technical assessment", "Please complete the coding challenge within 5 days. Thanks for applying to this role.", C.ASSESSMENT_INVITATION),
     ("Job offer from Globex", "We are pleased to offer you the position of Engineer.", C.JOB_OFFER),
     ("Your application is under review", "Our hiring team is reviewing your application.", C.UNDER_REVIEW),

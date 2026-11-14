@@ -83,11 +83,12 @@ def test_dashboard_and_interviews(client):
     pid = platform_id(client)
     a = client.post("/api/v1/applications", json=payload(pid, status="interview_call")).json()["id"]
     client.post("/api/v1/applications", json=payload(pid, status="accepted"))
+    client.post("/api/v1/applications", json=payload(pid, status="rejected"))
     iv = client.post("/api/v1/interviews", json={"application_id": a, "interview_date": "2099-01-01T10:00:00Z", "interview_type": "Technical"})
     assert iv.status_code == 201 and iv.json()["company_name"] == "Startup XYZ"
     stats = client.get("/api/v1/dashboard/stats").json()
-    assert (stats["total"], stats["interview_calls"], stats["accepted"], stats["upcoming_interviews"]) == (2, 1, 1, 1)
-    assert client.get("/api/v1/dashboard/platforms").json()[0] == {"platform_id": pid, "name": "LinkedIn", "count": 2}
+    assert (stats["total"], stats["interview_calls"], stats["accepted"], stats["rejected"], stats["upcoming_interviews"]) == (3, 1, 1, 1, 1)
+    assert client.get("/api/v1/dashboard/platforms").json()[0] == {"platform_id": pid, "name": "LinkedIn", "count": 3}
     assert len(client.get("/api/v1/interviews", params={"upcoming": True}).json()) == 1
 
 

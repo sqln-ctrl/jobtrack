@@ -6,10 +6,11 @@ class ApplicationStatus(str, Enum):
     VIEWED = "viewed"
     INTERVIEW_CALL = "interview_call"
     ACCEPTED = "accepted"
+    REJECTED = "rejected"
 
 
 STATUS_LABELS = {
-    "sent": "Sent", "viewed": "Viewed", "interview_call": "Interview call", "accepted": "Accepted",
+    "sent": "Sent", "viewed": "Viewed", "interview_call": "Interview call", "accepted": "Accepted", "rejected": "Rejected",
 }
 
 
