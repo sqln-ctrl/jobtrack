@@ -61,6 +61,8 @@ RULES = [
     (C.UNDER_REVIEW, _rx(
         r"(application|resume|cv|profile|candidacy)[^.\n]{0,40}(under review|being reviewed|in review|being considered)",
         r"reviewing your (application|resume|cv|profile)",
+        r"(application|resume|cv|profile|candidacy)[^.\n]{0,40}(was |has been )?viewed",
+        r"(viewed|opened) your (application|resume|cv|profile)",
     )),
     (C.APPLICATION_CONFIRMATION, _rx(
         r"thank(s| you) for (applying|your application|your interest in)",

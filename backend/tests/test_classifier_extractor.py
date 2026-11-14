@@ -15,6 +15,7 @@ clf = RuleBasedClassifier()
     ("Next steps: technical assessment", "Please complete the coding challenge within 5 days. Thanks for applying to this role.", C.ASSESSMENT_INVITATION),
     ("Job offer from Globex", "We are pleased to offer you the position of Engineer.", C.JOB_OFFER),
     ("Your application is under review", "Our hiring team is reviewing your application.", C.UNDER_REVIEW),
+    ("Your application was viewed", "The hiring team at Acme has viewed your application.", C.UNDER_REVIEW),
     ("Weekly job alert: 12 new jobs for you", "Backend roles near you", C.NOT_JOB_RELATED),
     ("50% off shoes", "Unfortunately this sale ends tonight. We are unable to extend it.", C.NOT_JOB_RELATED),
     ("Your account is under review", "Please verify your identity.", C.NOT_JOB_RELATED),

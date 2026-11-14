@@ -25,7 +25,7 @@ from app.services.gmail.tokens import get_valid_access_token
 log = logging.getLogger(__name__)
 
 JOB_QUERY = (
-    '(application OR applied OR applying OR interview OR assessment OR offer OR candidate OR candidacy '
+    '(application OR applied OR applying OR viewed OR review OR interview OR assessment OR offer OR candidate OR candidacy '
     'OR recruiter OR "hiring team" OR position OR "thank you for your interest") '
     '-in:chats -category:promotions -category:social'
 )
