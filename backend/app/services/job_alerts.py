@@ -19,7 +19,8 @@ ANCHOR = re.compile(r"<a\b[^>]*?href\s*=\s*(['\"])(.*?)\1[^>]*>(.*?)</a\s*>", re
 TAG = re.compile(r"(?s)<[^>]+>")
 SPACE = re.compile(r"\s+")
 GENERIC_LINK_TEXT = re.compile(r"^(apply|apply now|view job|view|learn more|see job|linkedin)$", re.I)
-MAX_ALERT_AGE = timedelta(days=7)
+MAX_ALERT_AGE_DAYS = 3
+MAX_ALERT_AGE = timedelta(days=MAX_ALERT_AGE_DAYS)
 
 
 @dataclass(frozen=True)

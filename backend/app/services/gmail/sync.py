@@ -112,7 +112,7 @@ class GmailSyncService:
 
     def _collect_ids(self, client: GmailClient, conn: GmailConnection) -> List[str]:
         s = get_settings()
-        alert_query = f"{LINKEDIN_ALERT_QUERY} newer_than:7d"
+        alert_query = f"{LINKEDIN_ALERT_QUERY} newer_than:{job_alerts.MAX_ALERT_AGE_DAYS}d"
         if conn.history_id:
             try:
                 # History only covers mail that arrived since the last sync. Re-run the
